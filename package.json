@@ -1,5 +1,5 @@
 {
-  "name": "koa-queue",
+  "name": "co-queue-koa",
   "version": "0.0.1",
   "description": "基于co的列队机制，同时运行n个，FIFO模式",
   "main": "index.js",
