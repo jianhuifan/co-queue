@@ -14,62 +14,57 @@ var co = require('co');
 
 module.exports = Queue;
 
-function Queue(concurrency, debug) {
+function Queue(worker, concurrency, debug) {
   if(concurrency === undefined) concurrency = 1;
-  var workers = 0;
   var q = {
+    worknum: 0,
     tasks: [],
+    results: [],
     concurrency: concurrency,
     empty: null,
     error: null,
     push: function (data) {
       q._insert(q, data, false);
-      debug && console.log("插值成功，列队长度：%s",q.length());
+      debug && console.log("push success, task length: %s",q.tasks.length);
       return this;
     },
     unshift: function (data) {
       q._insert(q, data, true);
-      debug && console.log("插值成功，列队长度：%s",q.length());
+      debug && console.log("unshift success, task length: %s",q.tasks.length);
       return this;
     },
-    run: function(){
+    run: function (){
       return function(cb){
-        process(cb);
+        q._checktorun(cb);
       };
-      function process(cb) {
-        for(var i = workers; i < concurrency; i++) {
-          if (!q.tasks.length) {
-            q.empty && q.empty();
-            break;
-          }
-          workers++;
-          exec(q.tasks.shift());
+    },
+    _checktorun: function(cb){
+      for(var i = q.worknum; i < concurrency; i++) {
+        if (!q.tasks.length) {
+          q.empty && q.empty();
+          break;
         }
-        function exec(task){
-          debug && console.log("单个任务开始");
-          co(function* () {
-            yield task;
-          })(function(err){
-            err && q.error && q.error(err, task);
-            next();
-          });
-        }
-        function next() {
-          debug && console.log("单个任务结束");
-          workers--;
-          if (q.tasks.length) {
-            process(cb);
-          }else{
-            cb && cb();
-          }
-        };
+        var task = q.tasks.shift();
+        q._exec(task, cb);
       }
     },
-    length: function () {
-        return q.tasks.length;
-    },
-    running: function () {
-        return workers;
+    _exec: function (task, cb){
+      q.worknum++;
+      debug && console.log("one task begin");
+      co(function* () {
+        return yield worker(task);
+      })(function(err,result){
+        err && q.error && q.error(err, task);
+        q.results.push(result);
+        q.worknum--;
+        debug && console.log("one task end");
+        // 检查是否结束
+        if (!q.tasks.length && q.worknum===0) {
+          cb();
+        }else{
+          q._checktorun(cb);
+        }
+      });
     },
     _insert: function (q, data, pos) {
       if(data.constructor !== Array) data = [data];

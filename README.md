@@ -1,98 +1,73 @@
 # co-queue for koa
-基于co的列队机制，同时运行n个，FIFO模式
+Lined up mechanism based on co, run multiple at the same time, FIFO mode
+
+
+## API
 
 ## demo.js
 
 ```
 var co = require('co');
 var sleep = require('co-sleep');
+var Queue = require('../index');
 
-var taskArray = [1,2,3,4,5,6,7,8].map(function(task){
-  return function* (){
-    yield sleep(task*2000);
-    console.log(task+'任务结束');
-  };
-});
+var taskArray = [1,2,3,4,5];
 
-var queue = Queue(3, true);  //第二个参数，debug模式
-queue.error = function(err,task){
-  console.log("出错啦");
+var queue = Queue(function *(task){
+  yield sleep(task*1000);
+  console.log('task[%s] begin',task);
+  return task;
+}, 3, true);
+
+queue.error = function(err, task){
+  console.log('task[%s] error: %j', task, err);
 };
+
+queue.empty = function(){
+  console.log('queue empty!');
+};
+
 setInterval(function(){
-  console.log("当前运行任务数：%s, 剩余任务数：%s。", queue.running(), queue.length());
+  console.log("running task number: %s, tasks length: %s。", queue.worknum, queue.tasks.length);
 },1000);
 
 co(function* () {
   yield queue.push(taskArray).run();
+  console.log("results：%s", queue.results);
 })();
-```
-
-##demo测试结果如下：
 
 ```
-$ node --harmony demo.js
-插值成功，列队长度：8
-单个任务开始
-单个任务开始
-单个任务开始
-当前运行任务数：3, 剩余任务数：5。
-当前运行任务数：3, 剩余任务数：5。
-1任务结束
-单个任务结束
-单个任务开始
-当前运行任务数：3, 剩余任务数：4。
-当前运行任务数：3, 剩余任务数：4。
-2任务结束
-单个任务结束
-单个任务开始
-当前运行任务数：3, 剩余任务数：3。
-当前运行任务数：3, 剩余任务数：3。
-3任务结束
-单个任务结束
-单个任务开始
-当前运行任务数：3, 剩余任务数：2。
-当前运行任务数：3, 剩余任务数：2。
-当前运行任务数：3, 剩余任务数：2。
-当前运行任务数：3, 剩余任务数：2。
-4任务结束
-单个任务结束
-单个任务开始
-当前运行任务数：3, 剩余任务数：1。
-当前运行任务数：3, 剩余任务数：1。
-当前运行任务数：3, 剩余任务数：1。
-当前运行任务数：3, 剩余任务数：1。
-5任务结束
-单个任务结束
-单个任务开始
-当前运行任务数：3, 剩余任务数：0。
-当前运行任务数：3, 剩余任务数：0。
-当前运行任务数：3, 剩余任务数：0。
-6任务结束
-当前运行任务数：3, 剩余任务数：0。
-单个任务结束
-当前运行任务数：2, 剩余任务数：0。
-当前运行任务数：2, 剩余任务数：0。
-当前运行任务数：2, 剩余任务数：0。
-当前运行任务数：2, 剩余任务数：0。
-当前运行任务数：2, 剩余任务数：0。
-7任务结束
-单个任务结束
-当前运行任务数：1, 剩余任务数：0。
-当前运行任务数：1, 剩余任务数：0。
-当前运行任务数：1, 剩余任务数：0。
-当前运行任务数：1, 剩余任务数：0。
-当前运行任务数：1, 剩余任务数：0。
-当前运行任务数：1, 剩余任务数：0。
-8任务结束
-单个任务结束
-当前运行任务数：0, 剩余任务数：0。
-当前运行任务数：0, 剩余任务数：0。
-当前运行任务数：0, 剩余任务数：0。
-当前运行任务数：0, 剩余任务数：0。
-当前运行任务数：0, 剩余任务数：0。
-当前运行任务数：0, 剩余任务数：0。
-当前运行任务数：0, 剩余任务数：0。
-当前运行任务数：0, 剩余任务数：0。
-当前运行任务数：0, 剩余任务数：0。
-当前运行任务数：0, 剩余任务数：0。
+
+##demo stdout：
+
+```
+$ node --harmony test/demo.js
+push success, task length: 5
+one task begin
+one task begin
+one task begin
+running task number: 3, tasks length: 2。
+task[1] begin
+one task end
+one task begin
+running task number: 3, tasks length: 1。
+task[2] begin
+one task end
+one task begin
+running task number: 3, tasks length: 0。
+task[3] begin
+one task end
+queue empty!
+running task number: 2, tasks length: 0。
+running task number: 2, tasks length: 0。
+task[4] begin
+one task end
+queue empty!
+running task number: 1, tasks length: 0。
+running task number: 1, tasks length: 0。
+task[5] begin
+one task end
+results：1,2,3,4,5
+running task number: 0, tasks length: 0。
+running task number: 0, tasks length: 0
 ```
