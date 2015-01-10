@@ -1,7 +1,9 @@
-# co-queue
+# co-queue for koa
 基于co的列队机制，同时运行n个，FIFO模式
+
+## demo.js
+
 ```
-//demo.js
 var co = require('co');
 var sleep = require('co-sleep');
 
@@ -23,9 +25,11 @@ setInterval(function(){
 co(function* () {
   yield queue.push(taskArray).run();
 })();
+```
 
+##demo测试结果如下：
 
-demo测试结果如下：
+```
 $ node --harmony demo.js
 插值成功，列队长度：8
 单个任务开始
